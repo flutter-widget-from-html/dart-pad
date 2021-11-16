@@ -726,7 +726,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
   }
 
   Future<void> showHome() async {
-    await showNew(Layout.dart);
+    await showNew(Layout.flutter);
   }
 
   /// Loads the gist provided by the 'id' query parameter or stored in
