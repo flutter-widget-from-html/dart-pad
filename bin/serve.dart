@@ -12,7 +12,7 @@ Future<void> main() async {
       .addMiddleware(logRequests())
       .addHandler(createStaticHandler('build', defaultDocument: 'index.html'));
 
-  final server = await io.serve(handler, 'localhost', 8000)
+  final server = await io.serve(handler, '0.0.0.0', 8000)
     ..autoCompress = true;
 
   print('Serving at http://${server.address.host}:${server.port}');
