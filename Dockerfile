@@ -23,11 +23,9 @@ RUN dart pub get
 COPY --chown=dart:dart . /app
 RUN dart pub get --offline
 
-ARG PRE_NULL_SAFETY_SERVER_URL
 ARG NULL_SAFETY_SERVER_URL
 RUN export PATH=$PATH:$HOME/.pub-cache/bin && \
   dart tool/grind.dart build \
-    "--pre-null-safety-server-url=$PRE_NULL_SAFETY_SERVER_URL" \
     "--null-safety-server-url=$NULL_SAFETY_SERVER_URL"
 
 CMD ["dart", "bin/serve.dart"]
