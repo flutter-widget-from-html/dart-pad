@@ -6,9 +6,6 @@ import 'dart:async';
 import 'dart:html' hide Document, Console;
 import 'dart:math' as math;
 
-import 'package:dart_pad/elements/material_tab_controller.dart';
-import 'package:dart_pad/src/ga.dart';
-import 'package:dart_pad/util/detect_flutter.dart';
 import 'package:mdc_web/mdc_web.dart';
 import 'package:split/split.dart';
 
@@ -26,6 +23,7 @@ import 'elements/console.dart';
 import 'elements/counter.dart';
 import 'elements/dialog.dart';
 import 'elements/elements.dart';
+import 'elements/material_tab_controller.dart';
 import 'modules/dart_pad_module.dart';
 import 'modules/dartservices_module.dart';
 import 'services/common.dart';
@@ -33,6 +31,8 @@ import 'services/dartservices.dart';
 import 'services/execution_iframe.dart';
 import 'sharing/editor_ui.dart';
 import 'sharing/gists.dart';
+import 'src/ga.dart';
+import 'util/detect_flutter.dart';
 import 'util/query_params.dart' show queryParams;
 
 const int defaultSplitterWidth = 6;
@@ -81,9 +81,6 @@ class Embed extends EditorUi {
   late final DElement editableTestSolutionCheckmark;
   bool _editableTestSolution = false;
   bool _showTestCode = false;
-
-  late final DElement nullSafetyCheckmark;
-  bool _nullSafetyEnabled = false;
 
   late final Counter unreadConsoleCounter;
 
@@ -156,7 +153,7 @@ class Embed extends EditorUi {
         ? const ['editor', 'html', 'css', 'solution', 'test']
         : const ['editor', 'solution', 'test'];
 
-    for (var name in tabNames) {
+    for (final name in tabNames) {
       tabController.registerTab(
         TabElement(querySelector('#$name-tab')!, name: name, onSelect: () {
           editorTabView.setSelected(name == 'editor');
@@ -230,8 +227,6 @@ class Embed extends EditorUi {
     showTestCodeCheckmark = DElement(querySelector('#show-test-checkmark')!);
     editableTestSolutionCheckmark =
         DElement(querySelector('#editable-test-solution-checkmark')!);
-    nullSafetyCheckmark =
-        DElement(querySelector('#toggle-null-safety-checkmark')!);
 
     menuButton =
         MDCButton(querySelector('#menu-button') as ButtonElement, isIcon: true)
@@ -242,7 +237,8 @@ class Embed extends EditorUi {
       ..setAnchorCorner(AnchorCorner.bottomLeft)
       ..setAnchorElement(menuButton.element);
     menu.listen('MDCMenu:selected', (e) {
-      final selectedIndex = (e as CustomEvent).detail['index'] as int?;
+      final detail = (e as CustomEvent).detail as Map;
+      final selectedIndex = detail['index'] as int?;
       switch (selectedIndex) {
         case 0:
           // Show test code
@@ -257,10 +253,6 @@ class Embed extends EditorUi {
               'hide', !_editableTestSolution);
           testEditor.readOnly =
               solutionEditor.readOnly = !_editableTestSolution;
-          break;
-        case 2:
-          // Null safety
-          nullSafetyEnabled = !nullSafetyEnabled;
           break;
       }
     });
@@ -385,7 +377,7 @@ class Embed extends EditorUi {
       });
 
     if (options.mode == EmbedMode.flutter || options.mode == EmbedMode.html) {
-      final controller = ConsoleExpandController(
+      final controller = _ConsoleExpandController(
           expandButton: querySelector('#console-output-header')!,
           footer: querySelector('#console-output-footer')!,
           expandIcon: querySelector('#console-expand-icon')!,
@@ -421,17 +413,14 @@ class Embed extends EditorUi {
 
     _initBusyLights();
 
-    _initModules()
-        .then((_) => _init())
-        .then((_) => _emitReady())
-        .then((_) => _initNullSafety());
+    _initModules().then((_) => _init()).then((_) => _emitReady());
   }
 
   /// Initializes a listener for messages from the parent window. Allows this
   /// embedded iframe to display and run arbitrary Dart code.
   void _initHostListener() {
-    window.addEventListener('message', (dynamic event) {
-      final data = event.data;
+    window.addEventListener('message', (Object? event) {
+      final data = (event as MessageEvent).data;
       if (data is! Map) {
         // Ignore unexpected messages
         return;
@@ -496,8 +485,6 @@ class Embed extends EditorUi {
 
     if (channelStr == 'master') {
       return FlutterSdkChannel.master;
-    } else if (channelStr == 'dev') {
-      return FlutterSdkChannel.dev;
     } else if (channelStr == 'beta') {
       return FlutterSdkChannel.beta;
     } else {
@@ -518,38 +505,6 @@ class Embed extends EditorUi {
 
   bool get githubParamsPresent =>
       githubOwner.isNotEmpty && githubRepo.isNotEmpty && githubPath.isNotEmpty;
-
-  void _initNullSafety() {
-    if (queryParams.hasNullSafety && queryParams.nullSafety) {
-      nullSafetyEnabled = true;
-    }
-  }
-
-  @override
-  set nullSafetyEnabled(bool enabled) {
-    _nullSafetyEnabled = enabled;
-    _handleNullSafetySwitched(enabled);
-    featureMessage.text = 'Null safety';
-    featureMessage.toggleAttr('hidden', !enabled);
-    nullSafetyCheckmark.toggleClass('hide', !enabled);
-  }
-
-  @override
-  bool get nullSafetyEnabled {
-    return _nullSafetyEnabled;
-  }
-
-  void _handleNullSafetySwitched(bool enabled) {
-    final api = deps[DartservicesApi] as DartservicesApi?;
-    if (enabled) {
-      api!.rootUrl = nullSafetyServerUrl;
-      window.localStorage['null_safety'] = 'true';
-    } else {
-      api!.rootUrl = preNullSafetyServerUrl;
-      window.localStorage['null_safety'] = 'false';
-    }
-    unawaited(performAnalysis());
-  }
 
   Future<void> _initModules() async {
     final modules = ModuleManager();
@@ -1083,28 +1038,27 @@ class FlashBox {
   }
 }
 
-class ConsoleExpandController extends Console {
+class _ConsoleExpandController extends Console {
   final DElement expandButton;
   final DElement footer;
   final DElement expandIcon;
   final Counter unreadCounter;
-  final Function? onSizeChanged;
-  final EditorUi? editorUi;
+  final void Function() onSizeChanged;
+  final EditorUi editorUi;
   late Splitter _splitter;
-  bool _expanded;
+  var _expanded = false;
 
-  ConsoleExpandController({
+  _ConsoleExpandController({
     required Element expandButton,
     required Element footer,
     required Element expandIcon,
     required Element consoleElement,
     required this.unreadCounter,
-    this.onSizeChanged,
-    this.editorUi,
+    required this.editorUi,
+    required this.onSizeChanged,
   })  : expandButton = DElement(expandButton),
         footer = DElement(footer),
         expandIcon = DElement(expandIcon),
-        _expanded = false,
         super(DElement(consoleElement),
             errorClass: 'text-red', filter: filterCloudUrls) {
     super.element.setAttr('hidden');
@@ -1159,7 +1113,7 @@ class ConsoleExpandController extends Console {
         // TODO(ryjohn): why does this happen?
       }
     }
-    onSizeChanged!();
+    onSizeChanged();
   }
 
   void _initSplitter() {
@@ -1175,7 +1129,7 @@ class ConsoleExpandController extends Console {
       sizes: [60, 40],
       minSize: [32, 32],
     );
-    editorUi!.listenForResize(editorContainer);
+    editorUi.listenForResize(editorContainer);
   }
 }
 

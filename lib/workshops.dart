@@ -1,15 +1,16 @@
+// Copyright (c) 2021, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
 import 'dart:async';
 import 'dart:html' hide Console;
 
-import 'package:dart_pad/context.dart';
-import 'package:dart_pad/src/util.dart';
-import 'package:dart_pad/util/detect_flutter.dart';
-import 'package:dart_pad/util/query_params.dart';
 import 'package:markdown/markdown.dart' as markdown;
 import 'package:split/split.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 import 'completion.dart';
+import 'context.dart';
 import 'core/dependencies.dart';
 import 'core/modules.dart';
 import 'dart_pad.dart';
@@ -32,6 +33,9 @@ import 'services/dartservices.dart';
 import 'services/execution_iframe.dart';
 import 'sharing/editor_ui.dart';
 import 'src/ga.dart';
+import 'src/util.dart';
+import 'util/detect_flutter.dart';
+import 'util/query_params.dart';
 import 'workshops/workshops.dart';
 
 WorkshopUi? _workshopUi;
@@ -83,18 +87,6 @@ class WorkshopUi extends EditorUi {
   DivElement get _editorPanelFooter =>
       querySelector('#editor-panel-footer') as DivElement;
 
-  @override
-  bool get nullSafetyEnabled => true;
-
-  /// Whether null safety was enabled for the previous execution.
-  @override
-  bool get nullSafetyWasPreviouslyEnabled => true;
-
-  @override
-  set nullSafetyEnabled(bool v) {
-    throw Exception('setting null safety in workshops is not supported.');
-  }
-
   Future<void> _init() async {
     await _loadWorkshop();
     _initBusyLights();
@@ -110,6 +102,7 @@ class WorkshopUi extends EditorUi {
     _initConsoles();
     _initButtons();
     _updateCode();
+    _updateSolutionButton();
     _focusEditor();
     _initOutputPanelTabs();
   }
@@ -167,7 +160,7 @@ class WorkshopUi extends EditorUi {
     deps[Analytics] = Analytics();
 
     // Use null safety for workshops
-    (deps[DartservicesApi] as DartservicesApi).rootUrl = nullSafetyServerUrl;
+    (deps[DartservicesApi] as DartservicesApi).rootUrl = serverUrl;
 
     analysisResultsController = AnalysisResultsController(
       DElement(querySelector('#issues')!),
@@ -427,13 +420,19 @@ class WorkshopUi extends EditorUi {
   }
 
   Future<void> _handleShowSolution() async {
-    final result = await dialog.showOkCancel(
-        'Show solution',
-        'Are you sure you want to show the solution? Your changes for this '
-            'step will be lost.');
-    if (result == DialogResult.ok) {
-      editor.document.updateValue(_workshopState.currentStep.solution);
-      showSolutionButton.disabled = true;
+    final solution = _workshopState.currentStep.solution;
+
+    if (solution == null) {
+      showSnackbar('This step has no solution.');
+    } else {
+      final result = await dialog.showOkCancel(
+          'Show solution',
+          'Are you sure you want to show the solution? Your changes for this '
+              'step will be lost.');
+      if (result == DialogResult.ok) {
+        editor.document.updateValue(solution);
+        showSolutionButton.disabled = true;
+      }
     }
   }
 

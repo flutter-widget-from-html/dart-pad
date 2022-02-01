@@ -7,7 +7,6 @@ library playground;
 import 'dart:async';
 import 'dart:html' hide Console;
 
-import 'package:dart_pad/editing/editor_codemirror.dart';
 import 'package:logging/logging.dart';
 import 'package:mdc_web/mdc_web.dart';
 import 'package:split/split.dart';
@@ -22,6 +21,7 @@ import 'core/modules.dart';
 import 'dart_pad.dart';
 import 'documentation.dart';
 import 'editing/codemirror_options.dart';
+import 'editing/editor_codemirror.dart';
 import 'elements/analysis_results_controller.dart';
 import 'elements/bind.dart';
 import 'elements/button.dart';
@@ -73,9 +73,6 @@ class Playground extends EditorUi implements GistContainer, GistController {
   final DElement _webTabBar = DElement(querySelector('#web-tab-bar')!);
   final DElement _webOutputLabel =
       DElement(querySelector('#web-output-label')!);
-  final MDCSwitch _nullSafetySwitch =
-      MDCSwitch(querySelector('#null-safety-switch'));
-  final Element? _channelSwitch = querySelector('#channel-switch');
   MDCMenu? _channelsMenu;
   String? _gistIdInProgress;
 
@@ -111,7 +108,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
     _initGistStorage();
     _initLayoutDetection();
     _initButtons();
-    _initSamplesMenu(nullSafe: nullSafetyEnabled);
+    _initSamplesMenu();
     _initMoreMenu();
     _initSplitters();
     _initTabs();
@@ -143,10 +140,10 @@ class Playground extends EditorUi implements GistContainer, GistController {
   ButtonElement get _samplesDropdownButton =>
       querySelector('#samples-dropdown-button') as ButtonElement;
 
-  MDCMenu get _samplesMenu => _initSamplesMenu(nullSafe: nullSafetyEnabled);
+  MDCMenu get _samplesMenu => _initSamplesMenu();
 
-  Element? get _channelsDropdownButton =>
-      querySelector('#channels-dropdown-button');
+  ButtonElement get _channelsDropdownButton =>
+      querySelector('#channels-dropdown-button') as ButtonElement;
 
   bool get _isCompletionActive => editor.completionActive;
 
@@ -211,95 +208,39 @@ class Playground extends EditorUi implements GistContainer, GistController {
         ?.onClick
         .listen((_) => showPackageVersionsDialog());
 
-    final channel = queryParams.channel;
-    if (channel == 'stable') {
-      // Disable the channel switcher.
-      final channelSwitch = _channelSwitch;
-      if (channelSwitch != null) {
-        channelSwitch.setAttribute('hidden', '');
-      }
-      final channelSwitchLabel = querySelector('#channel-switch-label');
-      if (channelSwitchLabel != null) {
-        channelSwitchLabel.setAttribute('hidden', '');
-      }
-    } else {
-      _initChannelsMenu();
-      _nullSafetySwitch.root.setAttribute('hidden', '');
-      final nullSafetySwitchLabel = querySelector('#null-safety-switch-label');
-      if (nullSafetySwitchLabel != null) {
-        nullSafetySwitchLabel.setAttribute('hidden', '');
-      }
-      final channelsButton = _channelsDropdownButton;
-      if (channelsButton is ButtonElement) {
-        MDCButton(channelsButton)
-            .onClick
-            .listen((e) => _toggleMenu(_channelsMenu));
-      }
-    }
-
-    // Query params have higher precedence than local storage
-    if (queryParams.hasNullSafety) {
-      nullSafetyEnabled = queryParams.nullSafety;
-    } else if (window.localStorage.containsKey('null_safety')) {
-      nullSafetyEnabled = window.localStorage['null_safety'] == 'true';
-    } else {
-      // Default to null safety
-      nullSafetyEnabled = true;
-    }
-
-    _nullSafetySwitch
-      ..checked = nullSafetyEnabled
-      ..listen('change', (event) {
-        _handleNullSafetySwitched(_nullSafetySwitch.checked!);
-      });
-    _handleNullSafetySwitched(nullSafetyEnabled);
+    _initChannelsMenu();
+    MDCButton(_channelsDropdownButton)
+        .onClick
+        .listen((e) => _toggleMenu(_channelsMenu));
   }
 
-  MDCMenu _initSamplesMenu({bool nullSafe = false}) {
+  MDCMenu _initSamplesMenu() {
     final element = querySelector('#samples-menu')!;
     element.children.clear();
 
-    List<Sample> samples;
-    if (nullSafe) {
-      samples = [
-        Sample('e75b493dae1287757c5e1d77a0dc73f1', 'Counter', Layout.flutter),
-        Sample('5c0e154dd50af4a9ac856908061291bc', 'Sunflower', Layout.flutter),
-        Sample('a1d5666d6b54a45eb170b897895cf757', 'Draggables & physics',
-            Layout.flutter),
-        Sample('85e77d36533b16647bf9b6eb8c03296d', 'Implicit animations',
-            Layout.flutter),
-        Sample('d57c6c898dabb8c6fb41018588b8cf73', 'Firebase Nanochat',
-            Layout.flutter),
-        Sample(
-            '493c8b3ef8931cbac3fbbe5c04b9c4cf', 'Google Fonts', Layout.flutter),
-        Sample('a133148221a8cbacbcef8bc77a6c82ec', 'Provider', Layout.flutter),
-        Sample(
-            'fdd369962f4ff6700a83c8a540fd6c4c', 'Flutter Bloc', Layout.flutter),
-        Sample('c0f7c578204d61e08ec0fbc4d63456cd', 'Hello World', Layout.dart),
-        Sample('d3bd83918d21b6d5f778bdc69c3d36d6', 'Fibonacci', Layout.dart),
-        Sample(
-            '4a68e553746602d851ab3da6aeafc3dd', 'HTTP requests', Layout.dart),
-      ];
-    } else {
-      samples = [
-        Sample('c0f7c578204d61e08ec0fbc4d63456cd', 'Hello World', Layout.dart),
-        Sample(
-            'a93a8de8eab0da9a07edd242df05e71f', 'Int to Double', Layout.dart),
-        Sample('21304866bcdc7b7d4d853e635f90f3e1', 'Mixins', Layout.dart),
-        Sample('d3bd83918d21b6d5f778bdc69c3d36d6', 'Fibonacci', Layout.dart),
-        Sample('b6409e10de32b280b8938aa75364fa7b', 'Counter', Layout.flutter),
-        Sample('b3ccb26497ac84895540185935ed5825', 'Sunflower', Layout.flutter),
-        Sample('ecb28c29c646b7f38139b1e7f44129b7', 'Draggables & physics',
-            Layout.flutter),
-        Sample('40308e0a5f47acba46ba62f4d8be2bf4', 'Implicit animations',
-            Layout.flutter),
-      ];
-    }
+    final samples = [
+      Sample('e75b493dae1287757c5e1d77a0dc73f1', 'Counter', Layout.flutter),
+      Sample('5c0e154dd50af4a9ac856908061291bc', 'Sunflower', Layout.flutter),
+      Sample('a1d5666d6b54a45eb170b897895cf757', 'Draggables & physics',
+          Layout.flutter),
+      Sample('85e77d36533b16647bf9b6eb8c03296d', 'Implicit animations',
+          Layout.flutter),
+      Sample('d57c6c898dabb8c6fb41018588b8cf73', 'Firebase Nanochat',
+          Layout.flutter),
+      Sample(
+          '493c8b3ef8931cbac3fbbe5c04b9c4cf', 'Google Fonts', Layout.flutter),
+      Sample('a133148221a8cbacbcef8bc77a6c82ec', 'Provider', Layout.flutter),
+      Sample(
+          'fdd369962f4ff6700a83c8a540fd6c4c', 'Flutter Bloc', Layout.flutter),
+      Sample('c0f7c578204d61e08ec0fbc4d63456cd', 'Hello World', Layout.dart),
+      Sample('d3bd83918d21b6d5f778bdc69c3d36d6', 'Fibonacci', Layout.dart),
+      Sample('4a68e553746602d851ab3da6aeafc3dd', 'HTTP requests', Layout.dart),
+    ];
 
     final listElement = _mdcList();
     element.children.add(listElement);
 
-    for (var sample in samples) {
+    for (final sample in samples) {
       final menuElement = _mdcListItem(children: [
         ImageElement()
           ..classes.add('mdc-list-item__graphic')
@@ -362,7 +303,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
 
     final currentChannel = queryParams.channel;
 
-    for (var channel in channels) {
+    for (final channel in channels) {
       final checkmark = SpanElement()
         ..id = ('${channel.name}-checkmark')
         ..classes.add('channel-menu-left')
@@ -409,7 +350,6 @@ class Playground extends EditorUi implements GistContainer, GistController {
     channels = await Future.wait([
       Channel.fromVersion('stable'),
       Channel.fromVersion('beta'),
-      Channel.fromVersion('dev'),
       Channel.fromVersion('old'),
     ]);
 
@@ -424,7 +364,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
     _channelsMenu?.unlisten('MDCMenu:selected', _handleChannelsMenuSelected);
     _channelsMenu = MDCMenu(menuElement)
       ..setAnchorCorner(AnchorCorner.bottomLeft)
-      ..setAnchorElement(_channelsDropdownButton as ButtonElement)
+      ..setAnchorElement(_channelsDropdownButton)
       ..hoistMenuToBody();
 
     _channelsMenu?.listen('MDCMenu:selected', _handleChannelsMenuSelected);
@@ -449,7 +389,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
       ..classes.add('mdc-list-item')
       ..classes.add('channel-menu-list')
       ..attributes.addAll({'role': 'menuitem'});
-    for (var child in children) {
+    for (final child in children) {
       element.children.add(child);
     }
     return element;
@@ -523,7 +463,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
   MaterialTabController _initTabs() {
     final webLayoutTabController =
         MaterialTabController(MDCTabBar(_webTabBar.element));
-    for (var name in ['dart', 'html', 'css']) {
+    for (final name in ['dart', 'html', 'css']) {
       webLayoutTabController.registerTab(
           TabElement(querySelector('#$name-tab')!, name: name, onSelect: () {
         ga.sendEvent('edit', name);
@@ -750,7 +690,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
       _editableGist.setBackingGist(storedGist);
 
       _editableGist.description = storedGist.description;
-      for (var file in storedGist.files) {
+      for (final file in storedGist.files) {
         _editableGist.getGistFile(file.name)!.content = file.content;
       }
       return LoadGistResult.storage;
@@ -801,7 +741,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
 
         final storedGist = _gistStorage.getStoredGist()!;
         _editableGist.description = storedGist.description;
-        for (var file in storedGist.files) {
+        for (final file in storedGist.files) {
           _editableGist.getGistFile(file.name)!.content = file.content;
         }
       }
@@ -938,39 +878,6 @@ class Playground extends EditorUi implements GistContainer, GistController {
     }
   }
 
-  /// Carries out various tasks to update the state of null safety:
-  ///
-  /// * switches the API root URL
-  /// * switches the state in local storage
-  /// * toggles [nullSafetyEnabled]
-  /// * toggles the title on the null safety switch
-  /// * updates the Dart and Flutter versions
-  /// * updates the URL query parameters
-  /// * re-analyzes the source
-  /// * re-initializes the Samples menu.
-  void _handleNullSafetySwitched(bool enabled) {
-    final api = deps[DartservicesApi] as DartservicesApi;
-
-    if (enabled) {
-      api.rootUrl = nullSafetyServerUrl;
-      window.localStorage['null_safety'] = 'true';
-      nullSafetyEnabled = true;
-      _nullSafetySwitch.root.title = 'Null safety is currently enabled';
-    } else {
-      api.rootUrl = preNullSafetyServerUrl;
-      window.localStorage['null_safety'] = 'false';
-      nullSafetyEnabled = false;
-      _nullSafetySwitch.root.title = 'Null safety is currently disabled';
-    }
-
-    updateVersions();
-
-    queryParams.nullSafety = enabled;
-
-    performAnalysis();
-    _initSamplesMenu(nullSafe: enabled);
-  }
-
   /// Carries out various tasks to update the channel:
   ///
   /// * switches the API root URL
@@ -982,12 +889,15 @@ class Playground extends EditorUi implements GistContainer, GistController {
       return;
     }
     queryParams.channel = channel;
+    final buttonText =
+        _channelsDropdownButton.querySelector('.mdc-button__label')!;
+    buttonText.text = '$channel channel';
     dartServices.rootUrl = Channel.urlMapping[channel]!;
     updateVersions();
     performAnalysis();
 
     // Re-create the channels menu to show the correct checkmark
-    for (var channelName in Channel.urlMapping.keys) {
+    for (final channelName in Channel.urlMapping.keys) {
       final checkmark = document.querySelector('#$channelName-checkmark');
       if (checkmark == null) {
         continue;
@@ -1179,7 +1089,7 @@ class NewPadDialog {
     });
 
     final cancelSub = _cancelButton.onClick.listen((_) {
-      completer.complete(selectedLayout);
+      completer.complete(null);
     });
 
     final createSub = _createButton.onClick.listen((_) {
