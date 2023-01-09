@@ -1,4 +1,4 @@
-FROM dart:2.14.4
+FROM dart:2.18.6-sdk
 
 RUN apt-get update && apt-get install -y \
   protobuf-compiler \
