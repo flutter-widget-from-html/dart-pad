@@ -63,35 +63,6 @@ serveLocalBackend() async {
   });
 }
 
-@Task('Serve locally on port 8000 and use beta server URL for pre null-safe')
-@Depends(ConstTaskInvocation(
-  'build',
-  ConstTaskArgs('build', options: {}),
-))
-serveBetaBackend() async {
-  log('\nServing dart-pad on http://localhost:8000');
-
-  await Process.start(Platform.executable, ['bin/serve.dart'])
-      .then((Process process) {
-    process.stdout.transform(utf8.decoder).listen(stdout.write);
-  });
-}
-
-// TODO(srawlins): Remove this task if the 'dev' channel becomes unsupported.
-@Task('Serve locally on port 8000 and use dev server URL for pre null-safe')
-@Depends(ConstTaskInvocation(
-  'build',
-  ConstTaskArgs('build', options: {}),
-))
-serveDevBackend() async {
-  log('\nServing dart-pad on http://localhost:8000');
-
-  await Process.start(Platform.executable, ['bin/serve.dart'])
-      .then((Process process) {
-    process.stdout.transform(utf8.decoder).listen(stdout.write);
-  });
-}
-
 /// A grinder flag which directs build_runner to use the non-release mode, and
 /// use DDC instead of dart2js.
 const _debugFlag = 'debug';
@@ -134,6 +105,10 @@ build() {
 
   final newEmbedFlutterFile = _buildDir.join('scripts/embed_flutter.dart.js');
   log('$newEmbedFlutterFile compiled to ${_printSize(newEmbedFlutterFile)}');
+
+  final newEmbedFlutterShowcaseFile =
+      _buildDir.join('scripts/embed_flutter_showcase.dart.js');
+  log('$newEmbedFlutterShowcaseFile compiled to ${_printSize(newEmbedFlutterShowcaseFile)}');
 
   final newEmbedHtmlFile = _buildDir.join('scripts/embed_html.dart.js');
   log('$newEmbedHtmlFile compiled to ${_printSize(newEmbedHtmlFile)}');
@@ -202,7 +177,7 @@ deploy() async {
 
   final app = yaml.loadYaml(File('web/app.yaml').readAsStringSync()) as Map;
 
-  final handlers = app['handlers'];
+  final handlers = app['handlers'] as List;
   var isSecure = false;
 
   for (final m in handlers) {
@@ -243,8 +218,6 @@ void generateProtos() {
     throw 'Error generating the Protobuf classes\n${result.stderr}';
   }
 
-  // generate common_server_proto.g.dart
-  Pub.run('build_runner', arguments: ['build', '--delete-conflicting-outputs']);
   Process.runSync('dart', ['format', 'lib/src/protos']);
 }
 

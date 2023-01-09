@@ -21,14 +21,14 @@ BSD-style license that can be found in the LICENSE file. -->
 
     <!-- codemirror -->
     <link href="packages/codemirror/css/codemirror.css" rel="stylesheet" media="screen">
-    <link href="packages/codemirror/addon/lint/lint.css" rel="stylesheet" media="screen">
-    <link href="packages/codemirror/addon/hint/show-hint.css" rel="stylesheet" media="screen">
     <link href="styles/cm-scrollbars.css" rel="stylesheet" media="screen">
+    <link href="styles/cm-hints.css" rel="stylesheet" media="screen">
     <link href="styles/cm-dartpad-dark.css" rel="stylesheet" media="screen">
     <link href="styles/cm-dartpad-light.css" rel="stylesheet" media="screen">
 
     <script src="packages/codemirror/codemirror.js" defer></script>
-    <script src="packages/codemirror/addon/scroll/simplescrollbars.js" defer></script>
+    <script src="scripts/dart_pad_search.js" defer></script>
+
     <script src="packages/split/split.min.js" defer></script>
 
     <!-- check that local storage is enabled -->
@@ -36,7 +36,7 @@ BSD-style license that can be found in the LICENSE file. -->
 
     <script defer src="scripts/embed_flutter.dart.js"></script>
     <script defer src="scripts/ga.js"></script>
-    <script type="text/javascript" src="dark_mode.js"></script>
+    <script type="text/javascript" src="scripts/dark_mode.js"></script>
 
     <!-- begin Material Design -->
     <script src="packages/mdc_web/material-components-web.min.js"></script>
@@ -127,14 +127,61 @@ BSD-style license that can be found in the LICENSE file. -->
 <section id="tab-container">
     <div id="editor-and-console-container">
         <div id="editor-container">
+            <div id="search-dialog" class="search-embed-flutter" hidden>
+                <div id="find-col1">
+                    <button id="open-replace" title="Toggle Replace"
+                            class="mdc-icon-button material-icons">expand_more
+                    </button>
+                </div>
+                <div id="find-col2">
+                    <div id="find-row">
+                        <span id="find-options">
+                            <input type="text" id="find-text" placeholder="Find" 
+                                    tabindex="1" autocomplete="off" spellcheck="false">
+                            <button id="find-match-case" title="Match Case"
+                                    class="simple-icon-button"
+                                    aria-pressed="false">
+                            </button>
+                            <button id="find-wholeword" title="Match Whole Word"
+                                    class="simple-icon-button"
+                                    aria-pressed="false">
+                            </button>
+                            <button id="find-regex" title="Use Regular Expression"
+                                    class="simple-icon-button"
+                                    aria-pressed="false">
+                            </button>
+                        </span>
+                        <span id="search-results">
+                            No Results
+                        </span>
+                        <button id="find-previous" title="Previous Match (Shift-F4)"
+                                class="mdc-icon-button material-icons">north
+                        </button>
+                        <button id="find-next" title="Next Match (F4)"
+                            class="mdc-icon-button material-icons">south
+                        </button>
+                        <button id="find-close" title="Close (Escape)"
+                                    class="mdc-icon-button material-icons">close
+                        </button>
+                    </div>
+                    <div id="replace-row">
+                        <span id="replace-options">
+                            <input type="text" id="replace-text" placeholder="Replace" 
+                                            tabindex="2" autocomplete="off" spellcheck="false">
+                        </span>
+                        <button id="replace-once" 
+                                class="mdc-icon-button"
+                                title="Replace (Enter)">
+                        </button>
+                        <button id="replace-all"
+                                class="mdc-icon-button"
+                                title="Replace All">
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div id="user-code-view" class="flex-auto d-flex flex-row no-overflow">
                 <div id="user-code-editor" spellcheck="false"></div>
-            </div>
-            <div id="solution-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
-                <div id="solution-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
-            </div>
-            <div id="test-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
-                <div id="test-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
             </div>
         </div>
         <div class="editor-button-group">
@@ -148,6 +195,7 @@ BSD-style license that can be found in the LICENSE file. -->
                     Console <span id="unread-console-counter" class="Counter" hidden></span>
                 </span>
                 <div id="console-expand-icon-container">
+                    <button id="console-clear-button" title="Clear console" class="console-clear-icon mdc-icon-button"></button>
                     <button id="console-expand-icon" title="Expand console" class="mdc-icon-button material-icons">
                         expand_less
                     </button>
@@ -209,6 +257,46 @@ BSD-style license that can be found in the LICENSE file. -->
                 </button>
                 <button type="button" id="dialog-right-button" class="mdc-button mdc-dialog__button">
                     <span class="mdc-button__label">Yes</span>
+                </button>
+            </footer>
+        </div>
+    </div>
+    <div class="mdc-dialog__scrim"></div>
+</div>
+
+<div id="keyboard-dialog"
+     class="mdc-dialog"
+     role="alertdialog"
+     aria-modal="true"
+     aria-labelledby="my-dialog-title"
+     aria-describedby="my-dialog-content">
+    <div class="mdc-dialog__container">
+        <div class="mdc-dialog__surface">
+            <h2 class="mdc-dialog__title">Keyboard shortcuts</h2>
+            <div class="mdc-dialog__content">
+                <div class="keyboard-container">
+                    <div id="keyboard-map-info">
+                    </div>
+                    <div id="vim-switch-container">
+                        <div class="mdc-switch">
+                            <div class="mdc-switch__track"></div>
+                            <div class="mdc-switch__thumb-underlay">
+                                <div class="mdc-switch__thumb">
+                                    <input type="checkbox"
+                                           id="vim-switch"
+                                           class="mdc-switch__native-control"
+                                           role="switch">
+                                </div>
+                            </div>
+                        </div>
+                        <label for="vim-switch">Use Vim Keyboard Mapping</label>               
+                    </div>
+                </div>
+            </div>
+            <footer class="mdc-dialog__actions">
+                <button type="button" id="keyboard-ok-button"
+                        class="mdc-button mdc-dialog__button">
+                    <span class="mdc-button__label">OK</span>
                 </button>
             </footer>
         </div>

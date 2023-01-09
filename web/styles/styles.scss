@@ -51,13 +51,33 @@ header {
     }
   }
 
-  .header-gist-name {
+  .header-actions {
     @include layout-flex;
     @include layout-horizontal;
     @include layout-center-justified;
+    flex-shrink: 0 !important;
+  }
+
+  #header-name-holder {
+    @include layout-flex;
+    @include layout-horizontal;
+    @include layout-center-justified;
+    @include layout-wrap;
+    font-size: 14pt;
+    margin-left: 1em;
+    margin-right: 1em;
+    user-select: none;
+    flex-shrink: 1;
+  }
+
+  .header-gist-name {
+    /*@include layout-flex;
+    @include layout-horizontal;
+    @include layout-center-justified;*/
     font-size: 14pt;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    /* not sure if this is better ? but for long names you can at least see and edit them)
+    /*white-space: pre-wrap;*/
     margin-left: 1em;
     margin-right: 1em;
     user-select: none;
@@ -136,6 +156,10 @@ a {
   @include layout-relative;
 }
 
+#editor-panel-header {
+  border-bottom: 1px solid $dark-gutter-background-color;
+}
+
 #editor-host {
   @include layout-flex;
   @include layout-relative;
@@ -203,6 +227,16 @@ a {
   }
 }
 
+#right-output-panel .view-label {
+  width: 100%;
+}
+
+#right-console-clear-button {
+  float: right;
+  margin-right: 10px;
+  margin-top: -8px;
+}
+
 .console {
   @include layout-flex;
   font-family: $editor-font;
@@ -220,6 +254,40 @@ a {
   .error-output {
     color: $dark-pink;
   }
+
+  .ansi-bold	{ font-weight: bold; }
+  .ansi-italic	{ font-style: italic; }
+  .ansi-underline { text-decoration: underline;  text-decoration-style:solid; }
+  .ansi-dim	{ opacity: 0.5; }
+  .ansi-hidden { opacity: 0; }
+  .ansi-blink { animation: code-blink-key 0.3s cubic-bezier(1, 0, 0, 1) infinite alternate; }
+  .ansi-rapid-blink { animation: code-blink-key 0.01s cubic-bezier(1, 0, 0, 1) infinite alternate; }
+  @keyframes code-blink-key {
+    to { opacity: 0; }
+  }
+  .ansi-double-underline { text-decoration: underline;  text-decoration-style:double; }
+  .ansi-strike-through { text-decoration:line-through;  text-decoration-style:solid; }
+  .ansi-overline { text-decoration:overline;  text-decoration-style:solid; }
+  .ansi-overline.code-underline.code-line-through { text-decoration: overline underline line-through; text-decoration-style:solid; }
+  .ansi-overline.code-underline { text-decoration: overline underline; text-decoration-style:solid; }
+  .ansi-overline.code-line-through { text-decoration: overline line-through; text-decoration-style:solid; }
+  .ansi-underline.code-line-through { text-decoration: underline line-through; text-decoration-style:solid; }
+  .ansi-overline.code-double-underline.code-line-through { text-decoration: overline underline line-through; text-decoration-style:double; }
+  .ansi-overline.code-double-underline { text-decoration: overline underline; text-decoration-style:double; }
+  .ansi-double-underline.code-line-through { text-decoration: underline line-through; text-decoration-style:double; }
+  .ansi-subscript { vertical-align: sub; font-size: smaller; line-height: normal; }
+  .ansi-superscript { vertical-align: super; font-size: smaller; line-height: normal; }
+
+  .ansi-font-1 { font-family: Verdana,Arial,sans-serif; }
+  .ansi-font-2 { font-family: Georgia,'Times New Roman',serif; }
+  .ansi-font-3 { font-family: Papyrus,Impact,fantasy; }
+  .ansi-font-4 { font-family: 'Cascadia Mono', 'Apple Chancery','Lucida Calligraphy',cursive; }
+  .ansi-font-5 { font-family: 'Courier New', 'Courier', monospace; }
+  .ansi-font-6 { font-size: 14px; font-family: 'Cascadia Code PL', 'Segoe WPC', 'Segoe UI',-apple-system, BlinkMacSystemFont, system-ui, "Ubuntu", "Droid Sans", sans-serif; }
+  .ansi-font-7 { font-size: 16px; font-family: 'Cascadia Mono PL', Menlo, Monaco, Consolas,"Droid Sans Mono", "Inconsolata", "Courier New", monospace, "Droid Sans Fallback"; }
+  .ansi-font-8 { font-size: 18px; font-family: 'Cascadia Code PL',"SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace; }
+  .ansi-font-9 { font-size: 20px; font-family: 'JetBrains Mono', "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace; }
+  .ansi-font-10 { font-stretch: ultra-expanded; font-weight: bold; font-family: 'League Mono', 'F25 BlackletterTypewriter', UnifrakturCook, Luminari, Apple Chancery, fantasy, Papyrus; }
 }
 
 // Splash
@@ -275,6 +343,7 @@ a {
 
 #issues-toggle, .issue-anchor {
   color: $mdc-theme-primary;
+  margin-right: 0;
   &:visited {
     color: $mdc-theme-primary;
   }
@@ -289,7 +358,6 @@ a {
   font-family: $normal-font;
   font-size: $playground-editor-font-size;
   cursor: default;
-  margin-right: 0px;
 }
 
 
@@ -347,10 +415,74 @@ a {
   }
 }
 
+#keyboard-dialog {
+
+  #vim-switch-container {
+    margin-top: 24px;
+    border-top: 1px $dark-blue solid;
+    padding-top: 10px;
+    border-bottom: 1px $dark-blue solid;
+    padding-bottom: 10px;
+  }
+
+  label[for=vim-switch] {
+    margin-left: 18px;
+  }
+}
+
 #samples-menu .mdc-list-item__graphic {
     height: auto;
     width: 20px;
     margin-right: 14px;
+}
+
+#unsaved-local-edit {
+  display: inline-flex;
+  background-color: orangered;
+  color: white;
+  font-size: 10px;
+  border-radius: 5px;
+  padding: 2px 4px;
+  height: 14px;
+  margin-top: 3px;
+  margin-right: 20px;
+}
+
+#github-menu-button {
+  display: inline-block;
+  background: url('../pictures/github_icon.svg') center no-repeat;
+  background-size: 24px 24px;
+  width: 32px;
+  height: 32px;
+  padding: 4px 4px;
+  filter: invert(100%);
+  margin-left: 8px;
+}
+
+#gist_star_button {
+  display: inline-flex;
+  margin-right: 30px;
+}
+
+#github-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  position: absolute;
+  top: 4px;
+  left: 4px;
+}
+#github-avatar[src] {
+  outline: grey 1px solid;
+  filter: invert(100%);
+}
+#logged_in_as {
+  text-align: center;
+  color:  grey;
+  font-size: 14px;
+}
+#logged_in_as_text {
+  user-select: none;
 }
 
 .channel-item {
@@ -366,6 +498,7 @@ a {
 p.mdc-list-item__details {
   font-size: 14px;
   margin-top: 0;
+  margin-bottom: 0;
 }
 
 // Editor Tabs

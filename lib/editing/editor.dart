@@ -7,6 +7,10 @@ library editor;
 import 'dart:html' as html;
 import 'dart:math';
 
+/// The callback that can be registered to get called when the editor updates it's
+/// search query annonations
+typedef SearchUpdateCallback = void Function();
+
 abstract class EditorFactory {
   List<String> get modes;
 
@@ -15,6 +19,10 @@ abstract class EditorFactory {
   Editor createFromElement(html.Element element);
 
   void registerCompleter(String mode, CodeCompleter completer);
+
+  /// used to set the search update callback that will be called when
+  /// the editors update their search annonations
+  void registerSearchUpdateCallback(SearchUpdateCallback sac);
 }
 
 abstract class Editor {
@@ -48,6 +56,17 @@ abstract class Editor {
 
   set theme(String str);
 
+  /// Retrieves the current value of the given option for this editor instance.
+  dynamic getOption(String option);
+
+  /// Change the configuration of the editor. [option] should the name of an
+  /// option, and value should be a valid value for that option.
+  void setOption(String option, dynamic value);
+
+  String get keyMap;
+
+  set keyMap(String str);
+
   /// Returns the cursor coordinates in pixels. cursorCoords.x corresponds to
   /// left and cursorCoords.y corresponds to top.
   Point getCursorCoords({Position? position});
@@ -57,6 +76,9 @@ abstract class Editor {
   /// Fired when a mouse is clicked. You can preventDefault the event to signal
   /// that the editor should do no further handling.
   Stream<html.MouseEvent> get onMouseDown;
+
+  /// Fired when the current current vim mode changes.
+  Stream get onVimModeChange;
 
   void resize();
 
@@ -72,6 +94,26 @@ abstract class Editor {
 
   /// Let the `Editor` instance know that it will no longer be used.
   void dispose() {}
+
+  /// Search on editor's active document
+  Map<String, dynamic> startSearch(String query, bool reverse,
+      bool highlightOnly, bool matchCase, bool wholeWord, bool regEx);
+
+  /// Search and Replace on editor's active document
+  int searchAndReplace(String query, String replaceText, bool replaceAll,
+      bool matchCase, bool wholeWord, bool regEx);
+
+  /// Get token that the cursor is on or next to (at beginning or end)
+  /// this occurs on currently active document only
+  /// Returns null if there was no token near cursor
+  String? getTokenWeAreOnOrNear([String? regEx]);
+
+  /// Use this method within callback to get the list of updated search
+  /// query matches
+  Map<String, dynamic> getMatchesFromSearchQueryUpdatedCallback();
+
+  /// Clear the active search and all resulting highlighting
+  void clearActiveSearch();
 }
 
 abstract class Document<E extends Editor> {
@@ -91,8 +133,18 @@ abstract class Document<E extends Editor> {
 
   void select(Position start, [Position? end]);
 
+  /// is there anything selected
+  bool get somethingSelected;
+
   /// The currently selected text in the editor.
   String get selection;
+
+  /// Replace the selection(s) with the given string. By default, the new
+  /// selection ends up after the inserted text. The optional select argument can
+  /// be used to change this. Passing `around`: will cause the new text to be
+  /// selected; `start`: will collapse the selection to the start of the inserted
+  /// text.
+  void replaceSelection(String replacement, [String? select]);
 
   String get mode;
 

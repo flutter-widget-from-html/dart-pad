@@ -27,22 +27,17 @@
           rel="stylesheet">
 
     <!-- highlightjs -->
-    <link rel="stylesheet" href="/styles/hljs-dartpad-dark.css">
-    <script src="/third_party/highlight/highlight.pack.js"></script>
+    <link rel="stylesheet" href="styles/hljs-dartpad-dark.css">
+    <script src="third_party/highlight/highlight.min.js"></script>
+    <script src="third_party/highlight/dart.min.js"></script>
 
     <!-- codemirror -->
     <link href="packages/codemirror/css/codemirror.css" rel="stylesheet"
           media="screen">
     <script src="packages/codemirror/codemirror.js" defer></script>
-
-    <!-- codemirror add-ons -->
-    <link href="packages/codemirror/addon/lint/lint.css" rel="stylesheet"
-          media="screen">
-    <link href="packages/codemirror/addon/hint/show-hint.css" rel="stylesheet"
-          media="screen">
-    <script src="packages/codemirror/addon/scroll/simplescrollbars.js"
+    <script src="scripts/dart_pad_search.js"
             defer></script>
-
+        
     <!-- codemirror themes -->
     <link href="styles/cm-scrollbars.css" rel="stylesheet" media="screen">
     <link href="styles/cm-dartpad-dark.css" rel="stylesheet" media="screen">
@@ -73,6 +68,10 @@
         <span>DartPad</span>
     </div>
     <div>
+        <button type="button" id="reset-button" class="mdc-button" disabled>
+            <i class="material-icons mdc-button__icon">refresh</i>
+            Reset
+        </button>
         <button type="button" id="format-button" class="mdc-button">
             <i class="material-icons mdc-button__icon">format_align_left</i>
             Format
@@ -91,7 +90,10 @@
                             class="mdc-icon-button material-icons">
                         keyboard_arrow_left
                     </button>
-                    <div id="steps-label">Step 1</div>
+                    <div id="steps-container">
+                        <div id="steps-label">Step 1</div>
+                        <div id="steps-menu-items"></div>
+                    </div>
                     <button id="next-step-btn"
                             class="mdc-icon-button material-icons">
                         keyboard_arrow_right
@@ -108,6 +110,24 @@
             <div id="editor-panel">
                 <div class="button-group">
                     <div id="dartbusy" class="busylight"></div>
+                    <button type="button" id="revert-button"
+                            title="revert to original"
+                            hidden="true"
+                            class="mdc-icon-button material-icons">
+                            restart_alt
+                    </button>
+                    <button type="button" id="show-solution-icon-button"
+                            title="show solution"
+                            hidden="true"
+                            class="mdc-icon-button material-icons">
+                            lightbulb
+                    </button>
+                    <button type="button" id="redo-button"
+                            title="restore last edit"
+                            hidden="true"
+                            class="mdc-icon-button material-icons">
+                            redo
+                    </button>
                     <button type="button" id="run-button"
                             class="mdc-button mdc-button--raised mdc-button--dense">
                         <i class="material-icons mdc-button__icon">play_arrow</i>
@@ -115,6 +135,59 @@
                     </button>
                 </div>
                 <div id="editor-host"></div>
+                <div id="search-dialog" class="search-workshop" hidden>
+                    <div id="find-col1">
+                        <button id="open-replace" title="Toggle Replace"
+                                class="mdc-icon-button material-icons">expand_more
+                        </button>
+                    </div>
+                    <div id="find-col2">
+                        <div id="find-row">
+                            <span id="find-options">
+                                <input type="text" id="find-text" placeholder="Find" 
+                                        tabindex="1" autocomplete="off" spellcheck="false">
+                                <button id="find-match-case" title="Match Case"
+                                        class="simple-icon-button"
+                                        aria-pressed="false">
+                                </button>
+                                <button id="find-wholeword" title="Match Whole Word"
+                                        class="simple-icon-button"
+                                        aria-pressed="false">
+                                </button>
+                                <button id="find-regex" title="Use Regular Expression"
+                                        class="simple-icon-button"
+                                        aria-pressed="false">
+                                </button>
+                            </span>
+                            <span id="search-results">
+                                No Results
+                            </span>
+                            <button id="find-previous" title="Previous Match (Shift-F4)"
+                                    class="mdc-icon-button material-icons">north
+                            </button>
+                            <button id="find-next" title="Next Match (F4)"
+                                class="mdc-icon-button material-icons">south
+                            </button>
+                            <button id="find-close" title="Close (Escape)"
+                                        class="mdc-icon-button material-icons">close
+                            </button>
+                        </div>
+                        <div id="replace-row">
+                            <span id="replace-options">
+                                <input type="text" id="replace-text" placeholder="Replace" 
+                                                tabindex="2" autocomplete="off" spellcheck="false">
+                            </span>
+                            <button id="replace-once" 
+                                    class="mdc-icon-button"
+                                    title="Replace (Enter)">
+                            </button>
+                            <button id="replace-all"
+                                    class="mdc-icon-button"
+                                    title="Replace All">
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div id="editor-panel-footer" class="editor-tab-host border-top">
                 <div class="editor-tabs">
@@ -133,9 +206,12 @@
                                 class="editor-tab mdc-button">Documentation
                         </button>
                     </div>
-                    <button id="editor-panel-close-button"
-                            class="mdc-icon-button material-icons" hidden>close
-                    </button>
+                    <div id="console-expand-icon-container">
+                        <button id="left-console-clear-button" title="Clear console" class="console-clear-icon mdc-icon-button"></button>
+                        <button id="editor-panel-close-button"
+                                class="mdc-icon-button material-icons" hidden>close
+                        </button>
+                    </div>
                 </div>
                 <div id="editor-panel-tab-host">
                     <!-- allow-popups allows plugins like url_launcher to open popups. -->
@@ -188,7 +264,8 @@
     </div>
     <div class="flex"></div>
     <div id="issues-message" class="info-message"></div>
-    <a id="issues-toggle" hidden></a>
+    <button type="button" id="issues-toggle" class="mdc-button mdc-button-footer" hidden>
+    </button>
     <div id="dartpad-version"></div>
     <i id="dartpad-package-versions" class="material-icons" aria-hidden="true">info</i>
 </footer>
@@ -216,5 +293,46 @@
     </div>
     <div class="mdc-dialog__scrim"></div>
 </div>
+
+<div id="keyboard-dialog"
+     class="mdc-dialog"
+     role="alertdialog"
+     aria-modal="true"
+     aria-labelledby="my-dialog-title"
+     aria-describedby="my-dialog-content">
+    <div class="mdc-dialog__container">
+        <div class="mdc-dialog__surface">
+            <h2 class="mdc-dialog__title">Keyboard shortcuts</h2>
+            <div class="mdc-dialog__content">
+                <div class="keyboard-container">
+                    <div id="keyboard-map-info">
+                    </div>
+                    <div id="vim-switch-container">
+                        <div class="mdc-switch">
+                            <div class="mdc-switch__track"></div>
+                            <div class="mdc-switch__thumb-underlay">
+                                <div class="mdc-switch__thumb">
+                                    <input type="checkbox"
+                                           id="vim-switch"
+                                           class="mdc-switch__native-control"
+                                           role="switch">
+                                </div>
+                            </div>
+                        </div>
+                        <label for="vim-switch">Use Vim Keyboard Mapping</label>                       
+                    </div>
+                </div>
+            </div>
+            <footer class="mdc-dialog__actions">
+                <button type="button" id="keyboard-ok-button"
+                        class="mdc-button mdc-dialog__button">
+                    <span class="mdc-button__label">OK</span>
+                </button>
+            </footer>
+        </div>
+    </div>
+    <div class="mdc-dialog__scrim"></div>
+</div>
+
 </body>
 </html>

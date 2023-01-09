@@ -14,13 +14,15 @@ targets:
           - web/example/workshops/**.dart
         options:
           dart2js_args:
-          - --minify
           - --fast-startup
+          - --minify
+          - --no-source-maps
           - -DSERVER_URL=https://stable.api.dartpad.dev/
           - -DSTABLE_SERVER_URL=https://stable.api.dartpad.dev/
           - -DBETA_SERVER_URL=https://beta.api.dartpad.dev/
           - -DDEV_SERVER_URL=https://dev.api.dartpad.dev/
           - -DOLD_SERVER_URL=https://old.api.dartpad.dev/
+          - -DMASTER_SERVER_URL=https://master.api.dartpad.dev/
 
       json_serializable:
         # Ignore workshop samples.
@@ -37,3 +39,4 @@ global_options:
         BETA_SERVER_URL: https://beta.api.dartpad.dev/
         DEV_SERVER_URL: https://dev.api.dartpad.dev/
         OLD_SERVER_URL: https://old.api.dartpad.dev/
+        MASTER_SERVER_URL: https://master.api.dartpad.dev/

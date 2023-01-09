@@ -27,14 +27,11 @@
     <!-- codemirror -->
     <link href="packages/codemirror/css/codemirror.css" rel="stylesheet" media="screen">
     <script src="packages/codemirror/codemirror.js" defer></script>
-
-    <!-- codemirror add-ons -->
-    <link href="packages/codemirror/addon/lint/lint.css" rel="stylesheet" media="screen">
-    <link href="packages/codemirror/addon/hint/show-hint.css" rel="stylesheet" media="screen">
-    <script src="packages/codemirror/addon/scroll/simplescrollbars.js" defer></script>
+    <script src="scripts/dart_pad_search.js" defer></script>
 
     <!-- codemirror themes -->
     <link href="styles/cm-scrollbars.css" rel="stylesheet" media="screen">
+    <link href="styles/cm-hints.css" rel="stylesheet" media="screen">
     <link href="styles/cm-dartpad-dark.css" rel="stylesheet" media="screen">
     <link href="styles/cm-dartpad-light.css" rel="stylesheet" media="screen">
 
@@ -62,7 +59,7 @@
         <img src="dart-192.png" alt="DartPad Logo" class="logo"/>
         <span>DartPad</span>
     </div>
-    <div>
+    <div class="header-actions">
         <button type="button" id="new-button" class="mdc-button">
             <i class="material-icons mdc-button__icon">code</i>
             New Pad
@@ -80,13 +77,92 @@
             Install SDK
         </button>
     </div>
-    <div class="header-gist-name"></div>
+    <div id="header-name-holder"><div class="header-gist-name"></div>
+        <span id="unsaved-local-edit" title="Login to GitHub to save as gist" hidden>local edits</span>
+        <span id="gist_star_button" title="Star this gist" hidden><i id="gist_star_inner_icon" class="material-icons mdc-button__icon" aria-hidden="true">star_outline</i></span></div>
     <div>
         <button type="button" id="samples-dropdown-button" class="mdc-button">
             <span class="mdc-button__label">Samples</span>
             <i class="material-icons mdc-button__icon" aria-hidden="true">expand_more</i>
         </button>
         <div id="samples-menu" class="mdc-menu mdc-menu-surface"></div>
+    </div>
+    <div id="starred-gists" hidden>
+        <button type="button" id="starred-gists-dropdown-button" class="mdc-button">
+            <span class="mdc-button__label">
+                <i class="material-icons mdc-button__icon" aria-hidden="true">hotel_class</i>Gists
+            </span>
+            <i class="material-icons mdc-button__icon" aria-hidden="true">expand_more</i>
+        </button>
+        <div id="starred-gists-menu" class="mdc-menu mdc-menu-surface"></div>
+    </div>
+    <div id="my-gists" hidden>
+        <button type="button" id="my-gists-dropdown-button" class="mdc-button">
+            <span class="mdc-button__label">My Gists</span>
+            <i class="material-icons mdc-button__icon" aria-hidden="true">expand_more</i>
+        </button>
+        <div id="my-gists-menu" class="mdc-menu mdc-menu-surface"></div>
+    </div>
+    <div>
+        <button id="github-menu-button" class="github-menu-icon mdc-icon-button">
+            <img id="github-avatar"/>
+        </button>
+        <div id="github-menu" class="mdc-menu mdc-menu-surface">
+            <ul class="mdc-list" role="menu" aria-hidden="true"
+                aria-orientation="vertical" tabindex="-1">
+                <li id="logged_in_as" hidden>
+                    <span id="logged_in_as_text">Logged in as XXXX</span>
+                </li>
+                <li id="github-login-item" class="mdc-list-item" role="menuitem">
+                    <span class="mdc-list-item__graphic">
+                        <i class="material-icons mdc-select__icon" tabindex="-1" role="button">login</i>
+                    </span>
+                    <span class="mdc-list-item__text">Login to Github</span>
+                </li>
+                <li id="github-createpublic-item" class="mdc-list-item" role="menuitem" title="Existing Gists must be forked or made private.">
+                    <span class="mdc-list-item__graphic">
+                        <i class="material-icons mdc-select__icon" tabindex="-1" role="button">post_add</i>
+                    </span>
+                    <span class="mdc-list-item__text">Create Public Gist</span>
+                </li>
+                <li id="github-createprivate-item" class="mdc-list-item" role="menuitem">
+                    <span class="mdc-list-item__graphic">
+                        <i class="material-icons mdc-select__icon" tabindex="-1" role="button">post_add</i>
+                    </span>
+                    <span class="mdc-list-item__text">Create Private Gist</span>
+                </li>
+                <li id="github-fork-item" class="mdc-list-item" role="menuitem">
+                    <span class="mdc-list-item__graphic">
+                        <i class="material-icons mdc-select__icon" tabindex="-1" role="button">fork_right</i>
+                    </span>
+                    <span class="mdc-list-item__text">Fork Gist</span>
+                </li>
+                <li id="github-update-item" class="mdc-list-item" role="menuitem">
+                    <span class="mdc-list-item__graphic">
+                        <i class="material-icons mdc-select__icon" tabindex="-1" role="button">sync</i>
+                    </span>
+                    <span class="mdc-list-item__text">Update Gist</span>
+                </li>
+                <li id="github-star-item" class="mdc-list-item" role="menuitem">
+                    <span class="mdc-list-item__graphic">
+                        <i class="material-icons mdc-select__icon" tabindex="-1" role="button">star_outline</i>
+                    </span>
+                    <span class="mdc-list-item__text">Star Gist</span>
+                </li>
+                <li id="github-open-on-github-item" class="mdc-list-item" role="menuitem">
+                    <span class="mdc-list-item__graphic">
+                        <i class="material-icons mdc-select__icon" tabindex="-1" role="button">open_in_new</i>
+                    </span>
+                    <span class="mdc-list-item__text">Open Gist on GitHub</span>
+                </li>
+                <li id="github-logout-item" class="mdc-list-item" role="menuitem">
+                    <span class="mdc-list-item__graphic">
+                        <i class="material-icons mdc-select__icon" tabindex="-1" role="button">logout</i>
+                    </span>
+                    <span class="mdc-list-item__text">Logout</span>
+                </li>
+            </ul>
+        </div>
     </div>
     <div>
         <button id="more-menu-button" class="mdc-icon-button material-icons">
@@ -182,6 +258,59 @@
                 </button>
             </div>
             <div id="editor-host"></div>
+            <div id="search-dialog" class="search-playground" hidden>
+                <div id="find-col1">
+                    <button id="open-replace" title="Toggle Replace"
+                            class="mdc-icon-button material-icons">expand_more
+                    </button>
+                </div>
+                <div id="find-col2">
+                    <div id="find-row">
+                        <span id="find-options">
+                            <input type="text" id="find-text" placeholder="Find" 
+                                    tabindex="1" autocomplete="off" spellcheck="false">
+                            <button id="find-match-case" title="Match Case"
+                                    class="simple-icon-button"
+                                    aria-pressed="false">
+                            </button>
+                            <button id="find-wholeword" title="Match Whole Word"
+                                    class="simple-icon-button"
+                                    aria-pressed="false">
+                            </button>
+                            <button id="find-regex" title="Use Regular Expression"
+                                    class="simple-icon-button"
+                                    aria-pressed="false">
+                            </button>
+                        </span>
+                        <span id="search-results">
+                            No Results
+                        </span>
+                        <button id="find-previous" title="Previous Match (Shift-F4)"
+                                class="mdc-icon-button material-icons">north
+                        </button>
+                        <button id="find-next" title="Next Match (F4)"
+                            class="mdc-icon-button material-icons">south
+                        </button>
+                        <button id="find-close" title="Close (Escape)"
+                                    class="mdc-icon-button material-icons">close
+                        </button>
+                    </div>
+                    <div id="replace-row">
+                        <span id="replace-options">
+                            <input type="text" id="replace-text" placeholder="Replace" 
+                                            tabindex="2" autocomplete="off" spellcheck="false">
+                        </span>
+                        <button id="replace-once" 
+                                class="mdc-icon-button"
+                                title="Replace (Enter)">
+                        </button>
+                        <button id="replace-all"
+                                class="mdc-icon-button"
+                                title="Replace All">
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div id="editor-panel-footer" class="editor-tab-host border-top">
                 <div class="editor-tabs">
                     <div class="tab-group">
@@ -195,9 +324,12 @@
                                 class="editor-tab mdc-button">Documentation
                         </button>
                     </div>
-                    <button id="editor-panel-close-button"
-                            class="mdc-icon-button material-icons" hidden>close
-                    </button>
+                    <div id="console-expand-icon-container">
+                        <button id="left-console-clear-button" title="Clear console" class="console-clear-icon mdc-icon-button"></button>
+                        <button id="editor-panel-close-button"
+                                class="mdc-icon-button material-icons" hidden>close
+                        </button>
+                    </div>
                 </div>
                 <div id="editor-panel-tab-host">
                     <div id="left-output-panel" class="console custom-scrollbar"></div>
@@ -211,7 +343,9 @@
             <iframe id="frame" sandbox="allow-scripts allow-popups" flex
                     src="scripts/frame_dark.html"></iframe>
             <div id="right-output-panel">
-                <span class="view-label">Console</span>
+                <span class="view-label">Console
+                    <button id="right-console-clear-button" title="Clear console" class="console-clear-icon mdc-icon-button"></button>
+                </span>
                 <div id="right-output-panel-content" class="console custom-scrollbar"></div>
             </div>
             <div id="right-doc-panel">
@@ -264,7 +398,8 @@
     </div>
     <div class="flex"></div>
     <div id="issues-message" class="info-message"></div>
-    <a id="issues-toggle" hidden></a>
+    <button type="button" id="issues-toggle" class="mdc-button mdc-button-footer" hidden>
+    </button>
     <div id="dartpad-version"></div>
     <i id="dartpad-package-versions" class="material-icons" aria-hidden="true">info</i>
 </footer>
@@ -296,53 +431,86 @@
      class="mdc-dialog"
      role="alertdialog"
      aria-modal="true"
-     aria-labelledby="my-dialog-title"
+     aria-labelledby="new-pad-dialog-title"
      aria-describedby="my-dialog-content">
     <div class="mdc-dialog__container">
         <div class="mdc-dialog__surface">
-            <h2 class="mdc-dialog__title">New Pad</h2>
+            <h2 class="mdc-dialog__title" id="new-pad-dialog-title">Create New Pad</h2>
             <div class="mdc-dialog__content">
                 <div class="dart-container">
-                    <div id="new-pad-select-dart" class="select-project-button mdc-ripple-surface mdc-ripple-surface--primary">
-                        <img src="/pictures/logo_dart.png"/>
+                    <div id="new-pad-select-dart" class="select-project-button mdc-ripple-surface mdc-ripple-surface--primary" role="button" tabindex="0">
+                        <img src="pictures/logo_dart.png" alt="Dart logo"/>
                         <span>Dart</span>
                     </div>
-                    <div id="new-pad-html-switch-container" class="hide">
-                        <div class="mdc-switch mdc-switch--disabled">
-                            <div class="mdc-switch__track"></div>
-                            <div class="mdc-switch__thumb-underlay">
-                                <div class="mdc-switch__thumb">
-                                    <input type="checkbox"
-                                           id="new-pad-html-switch"
-                                           class="mdc-switch__native-control"
-                                           role="switch">
-                                </div>
+                    <div id="new-pad-html-switch" class="mdc-switch">
+                        <div class="mdc-switch__track"></div>
+                        <div class="mdc-switch__thumb-underlay">
+                            <div class="mdc-switch__thumb">
+                                <input type="checkbox"
+                                        id="new-pad-html-switch-control"
+                                        class="mdc-switch__native-control"
+                                        role="switch">
                             </div>
                         </div>
-                        <label for="new-pad-html-switch">HTML</label>
                     </div>
+                    <label for="new-pad-html-switch">HTML</label>
                 </div>
                 <div class="divider"></div>
-                <div id="new-pad-select-flutter" class="select-project-button mdc-ripple-surface mdc-ripple-surface--primary">
-                    <img src="/pictures/logo_flutter.png"/>
+                <div id="new-pad-select-flutter" class="select-project-button mdc-ripple-surface mdc-ripple-surface--primary" role="button" tabindex="0">
+                    <img src="pictures/logo_flutter.png" alt="Flutter logo"/>
                     <span>Flutter</span>
                 </div>
             </div>
 
             <footer class="mdc-dialog__actions">
-
                 <button type="button" id="new-pad-cancel-button"
                         class="mdc-button mdc-dialog__button">
                     <span class="mdc-button__label">Cancel</span>
-                </button>
-                <button type="button" id="new-pad-create-button"
-                        class="mdc-button mdc-dialog__button">
-                    <span class="mdc-button__label">Create</span>
                 </button>
             </footer>
         </div>
     </div>
     <div class="mdc-dialog__scrim"></div>
 </div>
+<div id="keyboard-dialog"
+     class="mdc-dialog"
+     role="alertdialog"
+     aria-modal="true"
+     aria-labelledby="my-dialog-title"
+     aria-describedby="my-dialog-content">
+    <div class="mdc-dialog__container">
+        <div class="mdc-dialog__surface">
+            <h2 class="mdc-dialog__title">Keyboard shortcuts</h2>
+            <div class="mdc-dialog__content">
+                <div class="keyboard-container">
+                    <div id="keyboard-map-info">  
+                    </div>
+                    <div id="vim-switch-container">         
+                        <div class="mdc-switch">
+                            <div class="mdc-switch__track"></div>
+                            <div class="mdc-switch__thumb-underlay">
+                                <div class="mdc-switch__thumb">
+                                    <input type="checkbox"
+                                           id="vim-switch"
+                                           class="mdc-switch__native-control"
+                                           role="switch">
+                                </div>
+                            </div>
+                        </div>
+                        <label for="vim-switch">Use Vim Keyboard Mapping</label>
+                    </div>
+                </div>
+            </div>
+            <footer class="mdc-dialog__actions">
+                <button type="button" id="keyboard-ok-button"
+                        class="mdc-button mdc-dialog__button">
+                    <span class="mdc-button__label">OK</span>
+                </button>
+            </footer>
+        </div>
+    </div>
+    <div class="mdc-dialog__scrim"></div>
+</div>
+
 </body>
 </html>

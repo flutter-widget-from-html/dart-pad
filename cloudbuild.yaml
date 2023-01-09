@@ -1,0 +1,43 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - "--no-cache"
+      - "-t"
+      - "$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA"
+      - .
+      - "-f"
+      - Dockerfile
+      - "--build-arg"
+      - "SERVER_URL=https://try.fwfh.dev/"
+      - "--build-arg"
+      - "STABLE_SERVER_URL=https://try.fwfh.dev/"
+    id: Build
+    timeout: 1200s
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - "$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA"
+    id: Push
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
+    args:
+      - run
+      - services
+      - update
+      - $_SERVICE_NAME
+      - "--platform=managed"
+      - "--image=$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA"
+      - "--labels=commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID"
+      - "--region=$_DEPLOY_REGION"
+      - "--quiet"
+    id: Deploy
+    entrypoint: gcloud
+timeout: 1200s
+images:
+  - "$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA"
+substitutions:
+  _SERVICE_NAME: frontend
+  _DEPLOY_REGION: us-central1
+  _GCR_HOSTNAME: us.gcr.io
+tags:
+  - frontend
