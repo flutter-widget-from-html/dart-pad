@@ -4,7 +4,6 @@
 
 library gists;
 
-import 'dart:convert' show json;
 import 'dart:convert';
 
 import 'package:collection/collection.dart' show IterableExtension;
@@ -50,34 +49,40 @@ String? extractHtmlBody(String? html) {
 }
 
 Gist createSampleDartGist() {
-  final gist = Gist(description: phrases.generate());
-  gist.files.add(GistFile(name: 'main.dart', content: sample.dartCode));
-  gist.files.add(GistFile(
-      name: 'readme.md',
-      content: _createReadmeContents(
-          title: gist.description, withLink: _dartpadLink)));
+  final description = phrases.generate();
+  final gist = Gist(description: description, files: [
+    GistFile(name: 'main.dart', content: sample.dartCode),
+    GistFile(
+        name: 'readme.md',
+        content:
+            _createReadmeContents(title: description, withLink: _dartpadLink)),
+  ]);
   return gist;
 }
 
 Gist createSampleHtmlGist() {
-  final gist = Gist(description: phrases.generate());
-  gist.files.add(GistFile(name: 'main.dart', content: sample.dartCodeHtml));
-  gist.files.add(GistFile(name: 'index.html', content: sample.htmlCode));
-  gist.files.add(GistFile(name: 'styles.css', content: sample.cssCode));
-  gist.files.add(GistFile(
-      name: 'readme.md',
-      content: _createReadmeContents(
-          title: gist.description, withLink: _dartpadLink)));
+  final description = phrases.generate();
+  final gist = Gist(description: description, files: [
+    GistFile(name: 'main.dart', content: sample.dartCodeHtml),
+    GistFile(name: 'index.html', content: sample.htmlCode),
+    GistFile(name: 'styles.css', content: sample.cssCode),
+    GistFile(
+        name: 'readme.md',
+        content:
+            _createReadmeContents(title: description, withLink: _dartpadLink)),
+  ]);
   return gist;
 }
 
 Gist createSampleFlutterGist() {
-  final gist = Gist(description: phrases.generate());
-  gist.files.add(GistFile(name: 'main.dart', content: sample.flutterCode));
-  gist.files.add(GistFile(
-      name: 'readme.md',
-      content: _createReadmeContents(
-          title: gist.description, withLink: _dartpadLink)));
+  final description = phrases.generate();
+  final gist = Gist(description: description, files: [
+    GistFile(name: 'main.dart', content: sample.flutterCode),
+    GistFile(
+        name: 'readme.md',
+        content:
+            _createReadmeContents(title: description, withLink: _dartpadLink)),
+  ]);
   return gist;
 }
 
@@ -108,8 +113,8 @@ enum GistLoaderFailureType {
 }
 
 class GistLoaderException implements Exception {
-  final String? message;
   final GistLoaderFailureType failureType;
+  final String? message;
 
   const GistLoaderException(this.failureType, [this.message]);
 }
@@ -124,6 +129,12 @@ class GistLoader {
   static const String _stableApiDocsUrl = 'https://api.flutter.dev/snippets';
   static const String _masterApiDocsUrl =
       'https://master-api.flutter.dev/snippets';
+
+  static const String gistAlreadyForked = 'GIST_ALREADY_FORK';
+  static const String gistNotFound = 'GIST_NOT_FOUND';
+  static const String gistFailedToFork = 'FAILED_TO_FORK';
+  static const String gistFailedToCreate = 'FAILED_CREATE_GIST';
+  static const String gistFailedToUpdate = 'FAILED_TO_UPDATE';
 
   static void _defaultLoadHook(Gist gist) {
     // Update files based on our preferred file names.
@@ -140,10 +151,8 @@ class GistLoader {
     }
 
     if (gist.getFile('main.dart') == null &&
-        gist.files.where((f) => f.name?.endsWith('.dart') ?? false).length ==
-            1) {
-      final file =
-          gist.files.firstWhere((f) => f.name?.endsWith('.dart') ?? false);
+        gist.files.where((f) => f.name.endsWith('.dart')).length == 1) {
+      final file = gist.files.firstWhere((f) => f.name.endsWith('.dart'));
       file.name = 'main.dart';
     }
 
@@ -229,6 +238,374 @@ $styleRef$dartRef  </head>
     return gist;
   }
 
+  /// Load the gist with the given id.
+  Future<String> createGist(
+      Gist gistToSave, bool public, String authenticationToken) async {
+    if (beforeSaveHook != null) beforeSaveHook!(gistToSave);
+
+    /*
+      Create a gist
+      Allows you to add a new gist with one or more files.
+
+      Note: Don't name your files "gistfile" with a numerical suffix. 
+      This is the format of the automatic naming scheme that Gist uses 
+      internally.
+
+      POST /gists
+      Parameters
+      Name        Type    In      Description
+      accept      string  header  Setting toapplication/vnd.github.v3+json is recommended.
+
+      description  string body    Description of the gist
+
+      files       object  body    Required. Names and content for the files that make up the gist
+
+      public      boolean body    Flag indicating whether the gist is public     
+                  or string
+            
+      Example Response
+
+      Status: 201 Created
+      {
+        "url": "https://api.github.com/gists/aa5a315d61ae9438b18d",
+        "forks_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/forks",
+        "commits_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/commits",
+        "id": "aa5a315d61ae9438b18d",
+        "node_id": "MDQ6R2lzdGFhNWEzMTVkNjFhZTk0MzhiMThk",
+        "git_pull_url": "https://gist.github.com/aa5a315d61ae9438b18d.git",
+        "git_push_url": "https://gist.github.com/aa5a315d61ae9438b18d.git",
+        "html_url": "https://gist.github.com/aa5a315d61ae9438b18d",
+        "created_at": "2010-04-14T02:15:15Z",
+        "updated_at": "2011-06-20T11:34:15Z",
+        "description": "Hello World Examples",
+        "comments": 0,
+        "comments_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/comments/"
+      }
+    */
+    final Map<String, dynamic> map = gistToSave.toMap(); //;
+    map.remove('id');
+    map['public'] = public;
+    if (map['files'] != null) {
+      if (map['files']['.metadata.json'] != null) {
+        // if it is present then remove metadata json file from gist when saving
+        map['files'].remove('.metadata.json');
+      }
+    }
+    final String bodydata = json.encode(map);
+
+    final response = await _client.post(Uri.parse(_gistApiUrl),
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          if (authenticationToken.isNotEmpty)
+            'Authorization': 'Bearer $authenticationToken',
+        },
+        body: bodydata);
+
+    if (response.statusCode == 201) {
+      final retObj = jsonDecode(response.body);
+      return retObj['id'] as String;
+    } else if (response.statusCode == 404) {
+      throw const GistLoaderException(GistLoaderFailureType.contentNotFound);
+    } else if (response.statusCode == 403) {
+      throw const GistLoaderException(GistLoaderFailureType.rateLimitExceeded);
+    } else if (response.statusCode != 200) {
+      throw const GistLoaderException(GistLoaderFailureType.unknown);
+    }
+    return gistFailedToCreate;
+  }
+
+  /// Load the gist with the given id.
+  Future<String> updateGist(
+      Gist gistToUpdate, String authenticationToken) async {
+    if (beforeSaveHook != null) beforeSaveHook!(gistToUpdate);
+
+    final String gistId = gistToUpdate.id ?? '';
+
+    /*
+      Allows you to update or delete a gist file and rename gist files. Files from the previous version of the gist that aren't explicitly changed during an edit are unchanged.
+
+      PATCH /gists/{gist_id}
+      Parameters
+      Name         Type      In       Description
+      accept      string   header    Setting toapplication/vnd.github.v3+json is recommended.
+      gist_id     string   path      gist_id parameter
+      description string   body      Description of the gist
+      files       object   body      Names of files to be update
+    */
+    final Map<String, dynamic> map = gistToUpdate.toMap(); //;
+    map.remove('id');
+    map.remove('public');
+    final String bodydata = json.encode(map);
+
+    final response = await _client.patch(Uri.parse('$_gistApiUrl/$gistId'),
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          if (authenticationToken.isNotEmpty)
+            'Authorization': 'Bearer $authenticationToken',
+        },
+        body: bodydata);
+
+    if (response.statusCode == 200) {
+      /* example return
+              {
+                "url": "https://api.github.com/gists/aa5a315d61ae9438b18d",
+                "forks_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/forks",
+                "commits_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/commits",
+                "id": "aa5a315d61ae9438b18d",
+                "node_id": "MDQ6R2lzdGFhNWEzMTVkNjFhZTk0MzhiMThk",
+                "git_pull_url": "https://gist.github.com/aa5a315d61ae9438b18d.git",
+                "git_push_url": "https://gist.github.com/aa5a315d61ae9438b18d.git",
+                "html_url": "https://gist.github.com/aa5a315d61ae9438b18d",
+                "created_at": "2010-04-14T02:15:15Z",
+                "updated_at": "2011-06-20T11:34:15Z",
+                "description": "Hello World Examples",
+                "comments": 0,
+                "comments_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/comments/"
+              }
+            */
+      final retObj = jsonDecode(response.body);
+      return retObj['id'] as String;
+    } else if (response.statusCode == 404) {
+      return gistNotFound;
+    } else if (response.statusCode == 403) {
+      throw const GistLoaderException(GistLoaderFailureType.rateLimitExceeded);
+    } else if (response.statusCode != 200) {
+      throw const GistLoaderException(GistLoaderFailureType.unknown);
+    }
+    return gistFailedToUpdate;
+  }
+
+  /// Load the gist with the given id.
+  Future<String> forkGist(Gist gistToSave, bool localUnsavedEdits,
+      String authenticationToken) async {
+    if (beforeSaveHook != null) beforeSaveHook!(gistToSave);
+
+    final String gistId = gistToSave.id ?? '';
+    if (gistId.isEmpty) {
+      // we have no gistId to fork from, so SAVE instead
+      return createGist(gistToSave, gistToSave.public, authenticationToken);
+    }
+
+    /*
+      POST /gists/{gist_id}/forks
+      Parameters
+      Name       Type       In       Description
+      accept    string   header     Setting toapplication/vnd.github.v3+json is recommended.
+      gist_id    string   path       gist_id parameter
+    */
+    final response = await _client.post(
+      Uri.parse('$_gistApiUrl/$gistId/forks'),
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        if (authenticationToken.isNotEmpty)
+          'Authorization': 'Bearer $authenticationToken',
+      },
+    );
+
+    if (response.statusCode == 201) {
+      /* example return
+      {
+        "url": "https://api.github.com/gists/aa5a315d61ae9438b18d",
+        "forks_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/forks",
+        "commits_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/commits",
+        "id": "aa5a315d61ae9438b18d",
+        "node_id": "MDQ6R2lzdGFhNWEzMTVkNjFhZTk0MzhiMThk",
+        "git_pull_url": "https://gist.github.com/aa5a315d61ae9438b18d.git",
+        "git_push_url": "https://gist.github.com/aa5a315d61ae9438b18d.git",
+        "html_url": "https://gist.github.com/aa5a315d61ae9438b18d",
+        "files": {
+          "hello_world.rb": {
+            "filename": "hello_world.rb",
+            "type": "application/x-ruby",
+            "language": "Ruby",
+            "raw_url": "https://gist.githubusercontent.com/octocat/6cad326836d38bd3a7ae/raw/db9c55113504e46fa076e7df3a04ce592e2e86d8/hello_world.rb",
+            "size": 167
+          }
+        },
+        "public": true,
+        "created_at": "2010-04-14T02:15:15Z",
+        "updated_at": "2011-06-20T11:34:15Z",
+        "description": "Hello World Examples",
+        "comments": 0,
+        "user": null,
+        "comments_url": "https://api.github.com/gists/aa5a315d61ae9438b18d/comments/",
+        "owner": {
+          "login": "octocat",
+          "id": 1,
+          "node_id": "MDQ6VXNlcjE=",
+          "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/octocat",
+          "html_url": "https://github.com/octocat",
+          "followers_url": "https://api.github.com/users/octocat/followers",
+          "following_url": "https://api.github.com/users/octocat/following{/other_user}",
+          "gists_url": "https://api.github.com/users/octocat/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/octocat/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/octocat/subscriptions",
+          "organizations_url": "https://api.github.com/users/octocat/orgs",
+          "repos_url": "https://api.github.com/users/octocat/repos",
+          "events_url": "https://api.github.com/users/octocat/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/octocat/received_events",
+          "type": "User",
+          "site_admin": false
+        },
+        "truncated": false
+      }
+    */
+      final retObj = jsonDecode(response.body);
+      final String forkedGistId = retObj['id'] as String;
+
+      if (localUnsavedEdits) {
+        // There were UNSAVED local edits, so we also need to now
+        // UDPATE this new fork with those edits
+        final Gist forkedGist = gistToSave.cloneWithNewId(forkedGistId);
+        return updateGist(forkedGist, authenticationToken);
+      }
+      return forkedGistId;
+    } else if (response.statusCode == 422) {
+      return gistAlreadyForked;
+    } else if (response.statusCode == 404) {
+      return gistNotFound;
+    } else if (response.statusCode == 403) {
+      throw const GistLoaderException(GistLoaderFailureType.rateLimitExceeded);
+    } else if (response.statusCode != 200) {
+      throw const GistLoaderException(GistLoaderFailureType.unknown);
+    }
+    return gistFailedToFork;
+  }
+
+  /// Check to see if the user has starred the gist with the specified ID
+  Future<bool> checkIfGistIsStarred(
+      String gistIdToCheck, String authenticationToken) async {
+    /*
+        Check if a gist is starred
+
+        GET /gists/{gist_id}/star
+
+        Parameters
+        Name       Type      In     Description
+        accept    string    header  Setting toapplication/vnd.github.v3+json is recommended.
+        gist_id   string    path    gist_id parameter
+
+
+        Response Status codes
+        HTTP Status Code        Description
+            204                 Response if gist is starred
+            404                 Not Found if gist is not starred
+            304                 Not modified
+            403                 Forbidden
+
+       https://docs.github.com/en/rest/reference/gists#check-if-a-gist-is-starred
+    */
+    final response = await _client.get(
+      Uri.parse('$_gistApiUrl/$gistIdToCheck/star'),
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        if (authenticationToken.isNotEmpty)
+          'Authorization': 'Bearer $authenticationToken',
+      },
+    );
+    if (response.statusCode == 204) {
+      return true;
+    } else if (response.statusCode == 404) {
+      return false;
+    } else if (response.statusCode == 304) {
+      return false; // not modified
+    } else if (response.statusCode == 403) {
+      throw const GistLoaderException(GistLoaderFailureType.rateLimitExceeded);
+    } else {
+      throw const GistLoaderException(GistLoaderFailureType.unknown);
+    }
+  }
+
+  /// Star the specified gist for the user
+  Future<bool> starGist(String gistIdToStar, String authenticationToken) async {
+    /*
+        Star the gist
+
+        PUT /gists/{gist_id}/star
+
+        Parameters
+        Name       Type      In     Description
+        accept    string    header  Setting toapplication/vnd.github.v3+json is recommended.
+        gist_id   string    path    gist_id parameter
+
+
+        Response Status codes
+        HTTP Status Code        Description
+            204                 No Content (it worked)
+            404                 Not Found if gist is not starred
+            304                 Not modified
+            403                 Forbidden
+
+       https://docs.github.com/en/rest/reference/gists#check-if-a-gist-is-starred
+    */
+    final response = await _client.put(
+      Uri.parse('$_gistApiUrl/$gistIdToStar/star'),
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        if (authenticationToken.isNotEmpty)
+          'Authorization': 'Bearer $authenticationToken',
+      },
+    );
+    if (response.statusCode == 204) {
+      return true;
+    } else if (response.statusCode == 404) {
+      // Gist not found
+    } else if (response.statusCode == 403) {
+      throw const GistLoaderException(GistLoaderFailureType.rateLimitExceeded);
+    } else if (response.statusCode != 304) {
+      throw const GistLoaderException(GistLoaderFailureType.unknown);
+    }
+    return false;
+  }
+
+  /// Unstar the specified gist for the user
+  Future<bool> unstarGist(
+      String gistIdToStar, String authenticationToken) async {
+    /*
+        Star the gist
+
+        DELETE /gists/{gist_id}/star
+
+        Parameters
+        Name       Type      In     Description
+        accept    string    header  Setting toapplication/vnd.github.v3+json is recommended.
+        gist_id   string    path    gist_id parameter
+
+
+        Response Status codes
+        HTTP Status Code        Description
+            204                 No Content (it worked)
+            404                 Not Found if gist is not starred
+            304                 Not modified
+            403                 Forbidden
+
+       https://docs.github.com/en/rest/reference/gists#check-if-a-gist-is-starred
+    */
+    final response = await _client.delete(
+      Uri.parse('$_gistApiUrl/$gistIdToStar/star'),
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        if (authenticationToken.isNotEmpty)
+          'Authorization': 'Bearer $authenticationToken',
+      },
+    );
+    if (response.statusCode == 204) {
+      return true;
+    } else if (response.statusCode == 404) {
+      // Gist not found
+    } else if (response.statusCode == 403) {
+      throw const GistLoaderException(GistLoaderFailureType.rateLimitExceeded);
+    } else if (response.statusCode != 304) {
+      throw const GistLoaderException(GistLoaderFailureType.unknown);
+    }
+    return false;
+  }
+
   Future<Gist> loadGistFromAPIDocs(
       String sampleId, FlutterSdkChannel channel) async {
     if (channel == FlutterSdkChannel.beta) {
@@ -290,7 +667,7 @@ $styleRef$dartRef  </head>
 
     final metadataContent = extractGitHubResponseBody(metadataResponse.body);
 
-    ExerciseMetadata metadata;
+    final ExerciseMetadata metadata;
 
     try {
       final yamlMap = yaml.loadYaml(metadataContent);
@@ -344,9 +721,7 @@ $styleRef$dartRef  </head>
       description: metadata.name,
     );
 
-    if (afterLoadHook != null) {
-      afterLoadHook!(gist);
-    }
+    afterLoadHook?.call(gist);
 
     return gist;
   }
@@ -359,19 +734,19 @@ class Gist {
   final String? htmlUrl;
   final String? summary;
 
-  final bool? public;
+  final bool public;
 
-  late final List<GistFile> files;
+  final List<GistFile> files;
 
   Gist(
       {this.id,
       this.description,
-      this.public = true,
       this.htmlUrl,
       this.summary,
-      List<GistFile>? files}) {
-    this.files = files ?? [];
-  }
+      bool? public,
+      List<GistFile>? files})
+      : public = public ?? true,
+        files = files ?? [];
 
   Gist.fromMap(Map<String, dynamic> map)
       : this(
@@ -400,17 +775,25 @@ class Gist {
   GistFile? getFile(String name, {bool ignoreCase = false}) {
     if (ignoreCase) {
       name = name.toLowerCase();
-      return files.firstWhereOrNull((f) => f.name?.toLowerCase() == name);
+      return files.firstWhereOrNull((f) => f.name.toLowerCase() == name);
     } else {
       return files.firstWhereOrNull((f) => f.name == name);
     }
   }
 
+  bool hasDartContent() {
+    return files.any((GistFile file) {
+      final name = file.name;
+      final isDartFile = name.endsWith('.dart');
+      return isDartFile && file.hasContent;
+    });
+  }
+
   bool hasWebContent() {
     return files.any((GistFile file) {
-      final isWebFile =
-          file.name!.endsWith('.html') || file.name!.endsWith('.css');
-      return isWebFile && file.content!.trim().isNotEmpty;
+      final name = file.name;
+      final isWebFile = name.endsWith('.html') || name.endsWith('.css');
+      return isWebFile && file.hasContent;
     });
   }
 
@@ -421,39 +804,62 @@ class Gist {
   }
 
   Map<String, dynamic> toMap() {
-    final m = <String, dynamic>{};
-    if (id != null) m['id'] = id;
-    if (description != null) m['description'] = description;
-    if (public != null) m['public'] = public;
-    if (summary != null) m['summary'] = summary;
-    m['files'] = {};
-    for (final file in files) {
-      if (file.hasContent) {
-        m['files'][file.name] = {'content': file.content};
+    return {
+      if (id != null) 'id': id,
+      if (description != null) 'description': description,
+      'public': public,
+      if (summary != null) 'summary': summary,
+      'files': {
+        for (final file in files)
+          if (file.hasContent)
+            file.name: {
+              if (file.content != null) 'content': file.content,
+              if (file.rawUrl != null) 'raw_url': file.rawUrl,
+              if (file.language != null) 'language': file.language,
+              if (file.size != null) 'size': file.size
+            }
       }
-    }
-    return m;
+    };
   }
 
   String toJson() => json.encode(toMap());
 
   Gist clone() => Gist.fromMap(json.decode(toJson()) as Map<String, dynamic>);
 
+  Gist cloneWithNewId(String newGistId) {
+    final Map<String, dynamic> map = toMap();
+    map['id'] = newGistId;
+    return Gist.fromMap(map);
+  }
+
   @override
   String toString() => id ?? '';
 }
 
 class GistFile {
-  String? name;
+  String name;
   String? content;
+  String? rawUrl;
+  String? language;
+  int? size;
 
-  GistFile({this.name, this.content});
+  GistFile({required this.name, this.content});
 
   GistFile.fromMap(this.name, data) {
     content = data['content'] as String?;
+    rawUrl = data['raw_url'] as String?;
+    language = data['language'] as String?;
+    size = data['size'] as int?;
   }
 
-  bool get hasContent => content?.trim().isNotEmpty ?? false;
+  bool get hasContent {
+    if (content != null) {
+      return content?.trim().isNotEmpty ?? false;
+    } else if (rawUrl != null && size != null) {
+      return rawUrl!.isNotEmpty && size! > 0;
+    }
+    return false;
+  }
 
   @override
   String toString() => '[$name, ${content?.length ?? 0} chars]';
