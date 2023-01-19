@@ -7,9 +7,6 @@ name: No Response
 on:
   issue_comment:
     types: [created]
-  schedule:
-    # Schedule for five minutes after the hour, every hour
-    - cron: '5 * * * *'
 
 # All permissions not specified are set to 'none'.
 permissions:
